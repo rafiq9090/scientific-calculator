@@ -23,12 +23,17 @@ namespace calculator
         {
             InitializeComponent();
             txtDisplay.Text = "";
+            //txtDisplay.Multiline = true;
+            //txtDisplay.WordWrap = true;
+            //txtDisplay.ScrollBars = ScrollBars.None;
 
-            
+
             this.txtDisplay.GotFocus += new System.EventHandler(this.txtDisplay_GotFocus);
         }
 
-       
+        
+
+
         private void txtDisplay_GotFocus(object sender, EventArgs e)
         {
             HideCaret(txtDisplay.Handle);
@@ -97,6 +102,8 @@ namespace calculator
                         break;
 
                     case "√":
+                        ApplyFunction("sqrt");
+                        break;
                     case "sin":
                     case "cos":
                     case "tan":
@@ -121,8 +128,8 @@ namespace calculator
 
         private void AdjustFontSize()
         {
-            const int MaxDisplayLength = 15;
-            const float MinFontSize = 14F;
+            const int MaxDisplayLength = 10;
+            const float MinFontSize = 15F;
 
             string currentText = txtDisplay.Text;
 
@@ -261,6 +268,7 @@ namespace calculator
         private void EvaluateExpression()
         {
             if (string.IsNullOrWhiteSpace(txtDisplay.Text) || txtDisplay.Text == "0") return;
+
             try
             {
                 string expr = txtDisplay.Text
@@ -268,8 +276,26 @@ namespace calculator
                     .Replace("×", "*")
                     .Replace("÷", "/");
                 expr = ProcessPower(expr);
-                var result = new DataTable().Compute(expr, "");
-                string output = FormatResult(Convert.ToDouble(result));
+
+                double result;
+
+               
+                if (expr.Contains("*") && !expr.Contains("+") && !expr.Contains("-") && !expr.Contains("/"))
+                {
+                    var parts = expr.Split('*');
+                    decimal mul = 1;
+                    foreach (var p in parts)
+                    {
+                        mul *= decimal.Parse(p, CultureInfo.InvariantCulture);
+                    }
+                    result = (double)mul;
+                }
+                else
+                {
+                    result = Convert.ToDouble(new DataTable().Compute(expr, ""));
+                }
+
+                string output = FormatResult(result);
                 txtDisplay.Text = output;
                 lastResult = output;
                 AdjustFontSize();
@@ -364,10 +390,15 @@ namespace calculator
 
         private string FormatResult(double value)
         {
-            if (double.IsNaN(value) || double.IsInfinity(value)) return "Error";
-            return value.ToString("G15", CultureInfo.InvariantCulture);
-        }
+            if (double.IsNaN(value) || double.IsInfinity(value))
+                return "Error";
 
+            if (value % 1 != 0)
+            {
+                return value.ToString("#,##0.###############", CultureInfo.InvariantCulture);
+            }
+            return value.ToString("#,##0", CultureInfo.InvariantCulture);
+        }
         private void ShowError(string msg)
         {
             txtDisplay.Text = msg;
